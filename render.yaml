@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: attendix-erp
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "*"
+      # Optional: attach a Render PostgreSQL instance and set its
+      # Internal Connection String here to use Postgres instead of SQLite.
+      # - key: DATABASE_URL
+      #   fromDatabase:
+      #     name: attendix-db
+      #     property: connectionString
+
+# Optional managed Postgres (uncomment together with DATABASE_URL above)
+# databases:
+#   - name: attendix-db
+#     plan: free
