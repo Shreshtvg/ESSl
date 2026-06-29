@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #faf6f0;
+}
+
+/* Custom scrollbar for modern looks */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Monthly Attendance Report print layout */
+#monthly-report-print-area table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9px;
+  font-family: Arial, sans-serif;
+  margin-bottom: 10px;
+}
+#monthly-report-print-area th,
+#monthly-report-print-area td {
+  border: 1px solid #333;
+  padding: 2px 4px;
+  text-align: center;
+}
+#monthly-report-print-area th {
+  background-color: #6aa84f;
+  color: #fff;
+}
+#monthly-report-print-area .label-cell {
+  background-color: #f3f3f3;
+  font-weight: bold;
+  text-align: left;
+}
+#monthly-report-print-area .text-left {
+  text-align: left;
+}
+#monthly-report-print-area .font-bold {
+  font-weight: bold;
+}
+#monthly-report-print-area .report-footer {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+#monthly-report-print-area .designation-totals-table {
+  width: 280px;
+}
+#monthly-report-print-area .remarks-box {
+  flex: 1;
+  border: 1px solid #333;
+  min-height: 60px;
+  padding: 4px;
+  font-size: 9px;
+}
+#monthly-report-print-area .signature-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 40px;
+  padding-top: 4px;
+  font-size: 10px;
+}
+#monthly-report-print-area .signature-row span {
+  border-top: 1px solid #333;
+  padding-top: 4px;
+  width: 28%;
+  text-align: center;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #monthly-report-print-area,
+  #monthly-report-print-area * {
+    visibility: visible;
+  }
+  #monthly-report-print-area {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  #monthly-report-print-area .report-page {
+    page-break-after: always;
+  }
+}
