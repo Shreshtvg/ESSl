@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// In production the API lives on a separate Render service, so VITE_API_URL
+// holds its full URL (e.g. https://attendix-api.onrender.com/api).
+// Locally it's unset, so we fall back to '/api' and let the Vite dev proxy handle it.
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },

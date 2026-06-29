@@ -112,10 +112,13 @@ STORAGES = {
     },
 }
 
-# Serve the built React SPA (frontend/dist) from the site root.
-# HashRouter means all app routes live under '/#/...', so only '/' needs index.html.
-WHITENOISE_ROOT = BASE_DIR.parent / 'frontend' / 'dist'
-WHITENOISE_INDEX_FILE = True
+# When the frontend is built alongside the backend (combined deploy), Django
+# can serve it from the site root. With the frontend deployed separately as a
+# static site, frontend/dist is absent and Django serves the API only.
+_SPA_DIST = BASE_DIR.parent / 'frontend' / 'dist'
+if _SPA_DIST.exists():
+    WHITENOISE_ROOT = _SPA_DIST
+    WHITENOISE_INDEX_FILE = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 

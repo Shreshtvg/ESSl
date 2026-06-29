@@ -1,23 +1,43 @@
 services:
+  # ---- Django REST API (backend) ----
   - type: web
-    name: attendix-erp
-    runtime: docker
+    name: attendix-api
+    runtime: python
     plan: free
-    dockerfilePath: ./Dockerfile
-    healthCheckPath: /
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "python manage.py migrate && gunicorn attendix.wsgi:application --bind 0.0.0.0:$PORT"
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
         value: "*"
-      # Optional: attach a Render PostgreSQL instance and set its
-      # Internal Connection String here to use Postgres instead of SQLite.
+      # Optional: attach a free Render Postgres for persistent data.
       # - key: DATABASE_URL
       #   fromDatabase:
       #     name: attendix-db
       #     property: connectionString
+
+  # ---- React static site (frontend) ----
+  - type: web
+    name: attendix-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    envVars:
+      # Must match the backend service's public URL. Verify/adjust after the
+      # API service is created (Render may append a suffix if the name is taken).
+      - key: VITE_API_URL
+        value: https://attendix-api.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
 
 # Optional managed Postgres (uncomment together with DATABASE_URL above)
 # databases:
