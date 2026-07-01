@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Download, Save, Check, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Save, Check, X } from 'lucide-react';
 import apiClient from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationsContext';
@@ -84,12 +84,7 @@ export default function Roster() {
     if (gridChanges[changeKey] !== undefined) return gridChanges[changeKey];
 
     const override = rosters.find(r => r.employee_id === emp.id && r.roster_date === date.dateStr);
-    if (override) {
-      const nameLower = (override.shift_name || '').toLowerCase();
-      if (nameLower.includes('week off') || nameLower.includes('wo')) return 'wo';
-      if (nameLower.includes('comp') || nameLower.includes('co')) return 'co';
-      return 'w';
-    }
+    if (override) return (override.status || 'W').toLowerCase();
 
     const dayOfWeek = date.rawDate.toLocaleDateString('en-US', { weekday: 'long' });
     const isWeekOff = String(emp.fixed_week_off || '').toLowerCase() === dayOfWeek.toLowerCase();
@@ -98,10 +93,7 @@ export default function Roster() {
 
   const getOriginalStatus = (emp, date) => {
     const override = rosters.find(r => r.employee_id === emp.id && r.roster_date === date.dateStr);
-    if (override) {
-      const nl = (override.shift_name || '').toLowerCase();
-      return (nl.includes('week off') || nl.includes('wo')) ? 'wo' : 'w';
-    }
+    if (override) return (override.status || 'W').toLowerCase();
     const dow = date.rawDate.toLocaleDateString('en-US', { weekday: 'long' });
     return String(emp.fixed_week_off || '').toLowerCase() === dow.toLowerCase() ? 'wo' : 'w';
   };
@@ -370,22 +362,7 @@ export default function Roster() {
           )}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center pt-2 border-t border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => toast.info(`Exporting ${selectedDept} roster to Excel...`)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#e2f5ec] text-[#2c9a63] hover:bg-[#d0eedf] text-xs font-bold rounded-lg cursor-pointer transition-colors border border-[#a2e3c2]"
-            >
-              <Download className="h-3.5 w-3.5" /><span>Excel</span>
-            </button>
-            <button
-              onClick={() => toast.info(`Exporting ${selectedDept} roster to PDF...`)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#fdeded] text-[#cb3131] hover:bg-[#fbd3d3] text-xs font-bold rounded-lg cursor-pointer transition-colors border border-[#f5abab]"
-            >
-              <Download className="h-3.5 w-3.5" /><span>PDF</span>
-            </button>
-          </div>
-
+        <div className="flex flex-col sm:flex-row gap-3 justify-end items-stretch sm:items-center pt-2 border-t border-slate-100">
           {(user?.role === 'Admin' || user?.role === 'Supervisor') && (
             <button
               id="save-roster-changes-btn"

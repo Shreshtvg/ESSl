@@ -12,6 +12,6 @@ class RosterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Roster
         fields = [
-            'id', 'employee_id', 'roster_date', 'shift_id',
+            'id', 'employee_id', 'roster_date', 'shift_id', 'status',
             'employee_name', 'employee_code', 'shift_name',
         ]

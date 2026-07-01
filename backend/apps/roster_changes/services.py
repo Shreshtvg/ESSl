@@ -37,7 +37,7 @@ class RosterChangeService:
 
     def review_request(self, request_id, status, user_id):
         try:
-            req = RosterChangeRequest.objects.get(id=request_id)
+            req = RosterChangeRequest.objects.select_related('employee').get(id=request_id)
         except RosterChangeRequest.DoesNotExist:
             raise ValueError('Roster change request not found')
 
@@ -46,16 +46,15 @@ class RosterChangeService:
         req.save()
 
         if status == 'Approved':
-            if req.requested_status == 'W':
-                Roster.objects.update_or_create(
-                    employee_id=req.employee_id,
-                    roster_date=req.roster_date,
-                    defaults={'shift_id': 1},
-                )
-            else:
-                Roster.objects.filter(
-                    employee_id=req.employee_id, roster_date=req.roster_date
-                ).delete()
+            # Persist the requested day-type (W / WO / CO) on the roster cell.
+            # Working days keep the employee's own default shift; off-days have none.
+            requested = req.requested_status
+            shift_id = req.employee.shift_id if requested == 'W' else None
+            Roster.objects.update_or_create(
+                employee_id=req.employee_id,
+                roster_date=req.roster_date,
+                defaults={'status': requested, 'shift_id': shift_id},
+            )
 
         return RosterChangeRequestSerializer(req).data
 

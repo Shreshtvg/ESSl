@@ -2,6 +2,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.activity_logs.services import log_activity
 from .models import User
+from .serializers import UserSerializer
 
 
 class UserService:
@@ -20,12 +21,7 @@ class UserService:
         log_activity(f"{user.name} logged in", 'Auth', user.id)
         return {
             'token': str(token),
-            'user': {
-                'id': user.id,
-                'name': user.name,
-                'email': user.email,
-                'role': user.role,
-            },
+            'user': UserSerializer(user).data,
         }
 
     def register(self, name, email, password, role='Supervisor'):
@@ -35,21 +31,14 @@ class UserService:
         user = User.objects.create_user(
             email=email, name=name, password=password, role=role or 'Supervisor'
         )
-        return {
-            'user': {
-                'id': user.id,
-                'name': user.name,
-                'email': user.email,
-                'role': user.role,
-            }
-        }
+        return {'user': UserSerializer(user).data}
 
     def get_user_by_id(self, user_id):
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return None
-        return {'id': user.id, 'name': user.name, 'email': user.email, 'role': user.role}
+        return UserSerializer(user).data
 
     def check_email_exists(self, email):
         return User.objects.filter(email=email).exists()
