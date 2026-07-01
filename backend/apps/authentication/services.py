@@ -1,5 +1,6 @@
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.activity_logs.services import log_activity
 from .models import User
 
 
@@ -8,12 +9,15 @@ class UserService:
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
+            log_activity(f"Failed login attempt for unknown email '{email}'", 'Auth')
             raise ValueError('User not found')
 
         if not user.check_password(password):
+            log_activity(f"Failed login attempt for '{user.name}' (incorrect password)", 'Auth', user.id)
             raise ValueError('Password incorrect')
 
         token = RefreshToken.for_user(user).access_token
+        log_activity(f"{user.name} logged in", 'Auth', user.id)
         return {
             'token': str(token),
             'user': {
