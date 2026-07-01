@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Printer, Search, FileSpreadsheet, FileText, ArrowRight, HelpCircle } from 'lucide-react';
+import { Download, Printer, FileSpreadsheet, FileText, ArrowRight, HelpCircle } from 'lucide-react';
 import apiClient from '../api/client';
 import { exportToExcel, exportToPDF } from '../utils/export';
 
@@ -22,7 +22,6 @@ export default function Reports() {
 
   const [departments, setDepartments] = useState([]);
   const [reportData, setReportData] = useState([]);
-  const [hasGenerated, setHasGenerated] = useState(false); // true only after user clicks Generate
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,18 +37,20 @@ export default function Reports() {
     loadDepts();
   }, []);
 
-  const generateReport = async (e) => {
-    const isUserAction = !!e; // Only true when triggered by form submit (user click)
-    if (e) e.preventDefault();
+  const generateReport = async () => {
     setLoading(true);
     setError('');
 
     try {
-      const query = `/reports?startDate=${startDate}&endDate=${endDate}&departmentId=${selectedDept}&branch=${selectedBranch}`;
-      const res = await apiClient.get(query);
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+        departmentId: selectedDept,
+        branch: selectedBranch,
+      });
+      const res = await apiClient.get(`/reports?${params.toString()}`);
       if (res.success) {
         setReportData(res.data);
-        if (isUserAction) setHasGenerated(true); // Mark as user-generated only on explicit action
       } else {
         setError(res.message);
       }
@@ -60,10 +61,15 @@ export default function Reports() {
     }
   };
 
-  // Run on mount once
+  // Live filtering: re-fetch whenever any filter changes. Debounced so rapid
+  // changes (e.g. picking dates) collapse into a single request. Also runs
+  // once on mount to load the initial report.
   useEffect(() => {
-    generateReport();
-  }, []);
+    const timer = setTimeout(() => {
+      generateReport();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [startDate, endDate, selectedDept, selectedBranch]);
 
   const handleExcelExport = () => {
     if (reportData.length === 0) return;
@@ -90,7 +96,7 @@ export default function Reports() {
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* FILTER BUILDER SELECTORS */}
-      <form onSubmit={generateReport} className="bg-white p-3 sm:p-4 lg:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); generateReport(); }} className="bg-white p-3 sm:p-4 lg:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <h2 className="font-display font-semibold text-slate-800 text-base">Corporate Report Query Engine</h2>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -146,18 +152,7 @@ export default function Reports() {
         <div className="flex justify-between items-center pt-3 border-t border-slate-100 flex-wrap gap-3">
           <p className="text-[10px] text-slate-400 font-medium">Query Coordinates: {startDate} <ArrowRight className="h-3 w-3 inline" /> {endDate}</p>
           <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2.1 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
-            >
-              <Search className="h-4 w-4" />
-              <span>{loading ? 'Compiling Calculations...' : 'Generate Spreadsheet Report'}</span>
-            </button>
-            
-            {!hasGenerated ? (
-              <span className="text-[10px] font-semibold text-slate-400 italic">Nothing to export — generate a report first</span>
-            ) : reportData.length > 0 ? (
+            {reportData.length > 0 ? (
               <div className="flex items-center gap-2">
                 <button
                   type="button"

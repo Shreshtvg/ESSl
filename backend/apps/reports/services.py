@@ -28,6 +28,7 @@ class ReportService:
         att_qs = Attendance.objects.filter(employee_id__in=emp_ids)
         if start_date:
             att_qs = att_qs.filter(attendance_date__gte=start_date)
+            att_qs = att_qs.filter(attendance_date__gte=start_date)
         if end_date:
             att_qs = att_qs.filter(attendance_date__lte=end_date)
 

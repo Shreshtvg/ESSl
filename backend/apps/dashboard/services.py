@@ -1,5 +1,7 @@
 from datetime import date as date_cls, timedelta
 
+from django.db.models import Count
+
 from apps.activity_logs.models import ActivityLog
 from apps.attendance.models import Attendance
 from apps.attendance_changes.models import AttendanceChange
@@ -75,21 +77,31 @@ class DashboardService:
                 if fixed_week_off != day_name:
                     dept_stats_map[dept_name]['absent'] += 1
 
-        # Multi-day trend (last 7 days)
+        # Multi-day trend (last 7 days) — one grouped query for the whole window
+        # instead of ~4 count() queries per day.
+        week_start = today - timedelta(days=6)
+        counts_by_date = {}
+        for row in (
+            Attendance.objects
+            .filter(attendance_date__range=[week_start, today])
+            .values('attendance_date', 'status')
+            .annotate(c=Count('id'))
+        ):
+            counts_by_date.setdefault(row['attendance_date'], {})[row['status']] = row['c']
+
         trend = []
         for i in range(6, -1, -1):
             cursor = today - timedelta(days=i)
-            cursor_str = cursor.strftime('%Y-%m-%d')
-            day_records = Attendance.objects.filter(attendance_date=cursor_str)
-            p = day_records.filter(status='Present').count()
-            a = day_records.filter(status='Absent').count()
-            l = day_records.filter(status='Leave').count()
-            if day_records.count() == 0:
+            day_map = counts_by_date.get(cursor, {})
+            p = day_map.get('Present', 0)
+            a = day_map.get('Absent', 0)
+            l = day_map.get('Leave', 0)
+            if sum(day_map.values()) == 0:  # no records that day at all
                 if cursor.weekday() != 6:  # not Sunday (Python: Monday=0..Sunday=6)
-                    p = int(len(employees) * 0.85)
-                    a = len(employees) - p
+                    p = int(total_employees * 0.85)
+                    a = total_employees - p
             trend.append({
-                'date': cursor_str,
+                'date': cursor.strftime('%Y-%m-%d'),
                 'day': cursor.strftime('%a'),
                 'Present': p,
                 'Absent': a,

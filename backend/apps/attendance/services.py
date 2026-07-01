@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from django.db.models import Count
+
 from apps.activity_logs.services import log_activity
 from apps.core.utils import calculate_hours, weekday_name
 from apps.employees.models import Employee
@@ -112,37 +114,39 @@ class AttendanceService:
 
     def get_summary(self, date):
         day_name = weekday_name(date)
-        employees = list(
-            Employee.objects.select_related('department').filter(status='Active')
-        )
-        records = {
-            a.employee_id: a.status
-            for a in Attendance.objects.filter(attendance_date=date)
-        }
+        active = Employee.objects.filter(status='Active')
+        total = active.count()
 
-        present = absent = leave = week_off = holiday = 0
-        for emp in employees:
-            status = records.get(emp.id)
-            if status:
-                if status == 'Present':
-                    present += 1
-                elif status == 'Leave':
-                    leave += 1
-                elif status == 'Absent':
-                    absent += 1
-                elif status == 'Week Off':
-                    week_off += 1
-                elif status == 'Holiday':
-                    holiday += 1
-            else:
-                fixed_week_off = emp.department.fixed_week_off if emp.department else None
-                if fixed_week_off == day_name:
-                    week_off += 1
-                else:
-                    absent += 1
+        # Counts of actual records today, grouped in the DB (one query).
+        # Restricted to active employees to match the per-employee logic below.
+        recorded = {
+            row['status']: row['c']
+            for row in (
+                Attendance.objects
+                .filter(attendance_date=date, employee__status='Active')
+                .values('status')
+                .annotate(c=Count('id'))
+            )
+        }
+        present = recorded.get('Present', 0)
+        leave = recorded.get('Leave', 0)
+        absent = recorded.get('Absent', 0)
+        week_off = recorded.get('Week Off', 0)
+        holiday = recorded.get('Holiday', 0)
+
+        # Active employees with no record today are synthesized: 'Week Off' when
+        # today matches their department's fixed week-off, otherwise 'Absent'.
+        # Computed as counts in the DB rather than materializing every employee.
+        no_record = active.exclude(
+            id__in=Attendance.objects.filter(attendance_date=date).values('employee_id')
+        )
+        no_record_total = no_record.count()
+        no_record_week_off = no_record.filter(department__fixed_week_off=day_name).count()
+        week_off += no_record_week_off
+        absent += no_record_total - no_record_week_off  # everyone else defaults to Absent
 
         return {
-            'total': len(employees),
+            'total': total,
             'present': present,
             'absent': absent,
             'leave': leave,
